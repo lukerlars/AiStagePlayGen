@@ -3,7 +3,6 @@ from langchain_openai import ChatOpenAI
 from langgraph.prebuilt.tool_node import ToolNode
 from langgraph.checkpoint.memory import InMemorySaver
 from typing import TypedDict, Annotated, Sequence
-from langchain_core.tools import tool 
 from langchain_core.runnables import RunnableConfig
 from langchain_core.messages import (
     AnyMessage,
@@ -11,14 +10,19 @@ from langchain_core.messages import (
     AIMessage, 
     HumanMessage, 
     SystemMessage,
-    ToolMessage
+    ToolMessage,
+    ToolCall
     )
+from langchain_core.messages.utils import trim_messages
 import operator
 from dotenv import load_dotenv
 import json
-from characters import characters
+from characters import roster, Character, create_character, get_character_description 
+from langchain_core.tools import tool 
+from enum import Enum
 
 load_dotenv()
+
 system_message = SystemMessage(content="""
 You are the co writer of a stage play
 You recieve a story and write the continuation
@@ -44,7 +48,11 @@ Jack :
 In this case the response should be the dialgoue spoken by the character Jack. 
 
 To aide you with the writing process, you will be given access to tools to 
-retrieve and store new information about characters.  
+retrieve and store new information about characters. When you encounter
+a character, you may call the get infromation tool to see information 
+about the character.
+You should feel free to create new charcters. Make sure to always store the charcter 
+information using the tool, when introducing new characters. 
 
 """)
 
@@ -52,28 +60,34 @@ llm = ChatOpenAI(model = "gpt-4o-mini")
 checkpointer = InMemorySaver()
 graph_config = {"configurable": {"thread_id": "1"}}
 
+class ContextLength(Enum):
+    very_short = 5 
+    short = 15
+    medium = 40
+    long = 100
+
 
 class StagePlayState(TypedDict):
-    context: Annotated[Sequence[BaseMessage], add_messages]
+    counter : int
+    context: Annotated[list[AnyMessage], add_messages]
 
 
-## tool callling 
-@tool
-def get_character_description(character_name: str):
-    """Get a short description for a character"""
-    # TODO make better descriptions: add more thorough characted desc
-    # to character dataclass 
-    return str(characters[character_name])
+def call_llm(state: StagePlayState, config: RunnableConfig): 
+    trimmed_context = trim_messages(
+    messages=state["context"],
+    max_tokens= ContextLength.medium.value,  # e.g., 4000; adjust for your model's windo
+    strategy="last",  # Keeps recent messages
+    token_counter=len,  
+    start_on="human",  # Ensures trimmed history starts with HumanMessage (or System + Human)
+    include_system=False,  # Preserve SystemMessage if present (e.g., for prompts)
+    allow_partial=False  # Don't split individual messages
+    ) 
+    reply = llm.invoke([system_message, *trimmed_context])
+    return {"counter": state["counter"] +1, "context": reply}
 
 
-
-def call_llm(state: StagePlayState, config: RunnableConfig):
-    reply = llm.invoke([system_message, *state["context"]])
-    return {"context": reply}
-
-
-
-tools = [get_character_description]
+roster = roster
+tools = [get_character_description, create_character]
 llm = llm.bind_tools(tools)
 
 
@@ -82,10 +96,11 @@ tool_node = ToolNode(tools= tools, messages_key= "context")
 # Define the conditional edge that determines whether to continue or not
 def should_continue(state: StagePlayState):
     messages = state["context"]
+    counter = state["counter"]
     last_message = messages[-1]
     # If there is no function call, then we continue to generating new line
     if not last_message.tool_calls:
-        if len(messages) > 15:
+        if counter > ContextLength.very_short.value:
            return "end"
         else:
            return "continue"
@@ -111,7 +126,7 @@ builder.add_conditional_edges(
 )
 builder.add_edge("tool_node", "llm_node")
 
-graph = builder.compile()
+graph = builder.compile(checkpointer= checkpointer)
 
 def print_stream(stream):
     for s in stream:
@@ -123,10 +138,15 @@ def print_stream(stream):
 
 
 if __name__ == "__main__":
-    inputs = {"context": """Narrator: It is a sunny wistful day in Tam Tamouree,
-                           Swedenborg and Luna lazily scout over the townspeople from their hidden 
-                           vantage point atop the old church.
-                           Luna:
-                           """}
-    print_stream(graph.stream(inputs, stream_mode="values"))
+    inputs = StagePlayState(
+        counter= 0,
+        context = [HumanMessage(
+            """Narrator: It is a sunny wistful day in Tam Tamouree,
+            Swedenborg and Luna lazily scout over the townspeople from their hidden vantage point atop the old church.
+            Luna:
+            """)]
+            )
     
+    print_stream(graph.stream(inputs, stream_mode="values", config = graph_config))
+       
+    # graph.invoke(inputs, config = graph_config)
