@@ -10,6 +10,15 @@ class Character:
 
     relationships : dict[str, str]
 
+    def describe(self):
+        return f"""
+            name : {self.name}
+            gender: {self.gender}
+            age: {self.age}
+            disposition : {self.disposition}
+            Relationships : {'\n'.join([f'{u} : {v}' for u,v in self.relationships.items()])}"""
+
+
 
 character_luna = Character(
     name="Luna",
@@ -71,6 +80,7 @@ def create_character(
             {"Velasques": "Insignificant ambivalence", "Evangeline": "Secret crush", ...}
             Means Velasques regard Victoria with insignificant ambivalencel, and Evnageline
             has a secret crush on Victoria
+            Will error if referring to non existing character.
     """
 
     roster[character_name] = Character(name = character_name,
@@ -81,7 +91,11 @@ def create_character(
 
     # Update relatinships for other character instances
     for character in relationships_in:
-        roster[character].relationships[character_name] = relationships_in[character]
+        try: 
+            roster[character].relationships[character_name] = relationships_in[character]
+        except Exception:
+            raise ValueError(f"""Character :{character}, is not instantiated. Make sure to create 
+                             the character before assigning relatinship""") 
 
     return f"caracter {character_name} created" 
 
