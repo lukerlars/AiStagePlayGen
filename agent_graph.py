@@ -54,10 +54,6 @@ class StagePlayWriter:
         #                                                 check_same_thread=False)
         # # self.checkpointer = SqliteSaver(self.sqlite_connection)
 
-        self.sqlite_connection = aiosqlite.connect("db/graph_checkpoints/checkpoints.db",
-                                                         check_same_thread=False)
-        self.checkpointer = AsyncSqliteSaver(self.sqlite_connection)
-
         self.tools = [create_character, human_assistance] 
         self.llm = llm.bind_tools(self.tools)
 
