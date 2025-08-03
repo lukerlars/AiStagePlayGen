@@ -1,45 +1,71 @@
-from langchain_core.messages import HumanMessage
-from agent_graph import StagePlayState
+from fastapi import FastAPI
+from pydantic import BaseModel
+from agent_graph import StagePlayWriter, StagePlayState
 from langchain_core.runnables import RunnableConfig
-from dotenv import load_dotenv
+from langgraph.types import Command
+from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
-from agent_graph import StagePlayWriter
+from uuid import uuid4
+from dotenv import load_dotenv
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
+load_dotenv()
+app= FastAPI()
+llm = ChatOpenAI(model= "gpt-4o-mini")
+
+inputs = StagePlayState(
+    counter=0,
+    context=[
+        HumanMessage(
+            """Narrator: It is a sunny wistful day in Tam Tamouree,
+        Swedenborg and Luna lazily scout over the townspeople from their hidden vantage point atop the old church.
+        Luna:
+        """
+        )
+    ],
+)
+
+playwriter = StagePlayWriter(
+    llm=llm,
+    themes= """Loss of innocence, Becoming Psychologically whole, Jungian Psychology, Bildung""",
+    vibe= """Subtly, Weird and funky""",
+    setting= "Tam Tamoree, fictional town in German Bavaria",
+    number_of_chapters= 4
+)
+thread_id = "just_a_thread"
+connection_string_checkpointer = "db/graph_checkpoints/checkpoints.db"
 
 
-def print_stream(stream):
-    for s in stream:
-        message = s["context"][-1]
-        if isinstance(message, tuple):
-            print(message)
-        else:
-            message.pretty_print()
+@app.get("/start")
+async def start_graph() -> dict[str, str]:
+    """Start the agent application
+    """
+    # thread_id = uuid4
+    config = RunnableConfig({"configurable": {"thread_id": thread_id}})
+    async with AsyncSqliteSaver.from_conn_string(connection_string_checkpointer) as checkpointer:
+        async for event in (playwriter
+                            .build_graph(checkpointer)
+                            .astream(input=inputs, config= config, stream_mode="values")):
+
+            message = event["context"][-1]
+            if isinstance(message, tuple):
+                print(event)
+            else:
+                message.pretty_print()
+
+    return {"status": "Graph started, may be paused"}
+
+@app.get("/resume")
+async def resume_graph(input: str):
+    config = RunnableConfig({"configurable": {"thread_id": thread_id}})
+    resume_input = Command(resume= {"data": input})
+    async for event in playwriter.graph.astream(input = resume_input, config= config, stream_mode="values"): # type: ignore
+        print(event)
+    return {"status": "Resumed"}
 
 
-if __name__ == "__main__":
-    load_dotenv()
-    llm = ChatOpenAI(model="gpt-4o-mini")
-    # tools = [get_character_description, create_character, human_assistance]
+@app.get("/test_api")
+async def test()-> dict[str,str]:
+    return {"status" :"all good"}
 
-    inputs = StagePlayState(
-        counter=0,
-        context=[
-            HumanMessage(
-                """Narrator: It is a sunny wistful day in Tam Tamouree,
-            Swedenborg and Luna lazily scout over the townspeople from their hidden vantage point atop the old church.
-            Luna:
-            """
-            )
-        ],
-    )
-
-    graph_config: RunnableConfig = RunnableConfig({"configurable": {"thread_id": "new_thread_id"}})
-
-    playwriter = StagePlayWriter(
-        llm=llm,
-        themes= """Loss of innocence, Becoming Psychologically whole, Jungian Psychology, Bildung""",
-        vibe= """Subtly, Weird and funky""",
-        setting= "Tam Tamoree, fictional town in German Bavaria",
-        number_of_chapters= 4
-    )
-
-    print_stream(playwriter.graph.stream(input=inputs,stream_mode="values" ,config= graph_config))
+# Run: uvicorn main:app --host 0.0.0.0 --port 8000

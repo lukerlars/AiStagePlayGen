@@ -1,9 +1,18 @@
 from typing import Any, Callable
-from langchain_core.tools import BaseTool
+from langchain_core.tools import BaseTool, Tool
+
+
+def describe_character(character : dict[str, Any]):
+        return f"""
+            name : {character["name"]}
+            gender: {character["gender"]}
+            age: {character["age"]}
+            disposition : {character["disposition"]}
+            Relationships : {character["relationships"]}"""
 
 def stageplay_system_message(
-        tools: list[BaseTool],
-        roster: dict[str, Any],
+        tools: list[Any],
+        roster: list[dict[str, Any]],
         themes : str,
         vibe: str,
         setting : str,
@@ -51,7 +60,7 @@ def stageplay_system_message(
     You may also and are encouraged to occasionally ask a human for input. In this case call the ask 
     human tool and a human will fill in the next contiunation.
     The available tools are: 
-        { '\n'.join([tool.func.__name__ for tool in tools])}
+        { '\n'.join([tool.func.__name__ for tool in tools])} 
 
     #### Stage Play Information 
     
@@ -65,7 +74,7 @@ def stageplay_system_message(
         current chapter:  {current_chapter}/{number_of_chapters}
 
     3. Roster:
-        {'\n'.join([roster[character].describe() for character in roster])}
+        {'\n'.join([describe_character(character) for character in roster])}
     """
     if synopsis: 
         sys_message += f"""4. Synopsis

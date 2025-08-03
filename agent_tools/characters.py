@@ -1,52 +1,5 @@
-from dataclasses import dataclass
 from langchain_core.tools import tool 
-
-@dataclass
-class Character:
-    name : str
-    gender: str
-    age : int
-    disposition: str
-
-    relationships : dict[str, str]
-
-    def describe(self):
-        return f"""
-            name : {self.name}
-            gender: {self.gender}
-            age: {self.age}
-            disposition : {self.disposition}
-            Relationships : {'\n'.join([f'{u} : {v}' for u,v in self.relationships.items()])}"""
-
-
-
-character_luna = Character(
-    name="Luna",
-    gender= "F", 
-    age=16,
-    disposition= "Sassy",
-    relationships= {"Swedenborg": "Aimicable"})
-
-character_swedenborg = Character(
-    name="Swedenborg",
-    gender= "M", 
-    age=15,
-    disposition= "Melancholic",
-    relationships= {"Luna": "Unrequited Infatuation"})
-
-
-roster = {"Luna": character_luna, 
-              "Swedenborg": character_swedenborg}
-
-
-
-## tool callling 
-@tool
-def get_character_description(character_name: str) -> str:
-    """Get a short description for a character"""
-    # TODO make better descriptions: add more thorough characted desc
-    # to character dataclass 
-    return str(roster[character_name])
+from db.handler import add_entry, Character, Relationships
 
 
 @tool
@@ -78,25 +31,47 @@ def create_character(
             the other characters relates to the created character. Example: 
             If creating a character named Victoria and passign relationship_out =
             {"Velasques": "Insignificant ambivalence", "Evangeline": "Secret crush", ...}
-            Means Velasques regard Victoria with insignificant ambivalencel, and Evnageline
+            Means Velasques regards Victoria with insignificant ambivalencel, and Evangeline
             has a secret crush on Victoria
-            Will error if referring to non existing character.
     """
 
-    roster[character_name] = Character(name = character_name,
-                     gender= gender,
-                     age = age, 
-                     disposition= disposition,
-                     relationships= relationships_out)
+    character = Character(
+        name = character_name,
+        gender= gender,
+        age = age, 
+        disposition= disposition
+        )
 
-    # Update relatinships for other character instances
-    for character in relationships_in:
-        try: 
-            roster[character].relationships[character_name] = relationships_in[character]
-        except Exception:
-            raise ValueError(f"""Character :{character}, is not instantiated. Make sure to create 
-                             the character before assigning relatinship""") 
+    try:  
+        add_entry(character)
+    except Exception as e:
+        print(f"error creating character {e}")
 
-    return f"caracter {character_name} created" 
+    # Add character outwards facing relationships
+    for recipient, relation  in relationships_out.items():
+        relationship = Relationships(
+            character = character_name,
+            recipient_character = recipient,
+            relationship = relation,
+        )
+        try:
+            add_entry(relationship) 
+        except Exception as e:
+            print(f"Error creating outwards relationship {e}")
+    
+    # Add characters inward facing relationships
+    for deemer, relation  in relationships_in.items():
+        relationship = Relationships(
+            character = deemer,
+            recipient_character = character_name,
+            relationship = relation,
+        )
+        try:
+            add_entry(relationship) 
+        except Exception as e:
+            print(f"Error creating inwards relationship {e}")
+     
+
+    return f"character {character_name} created" 
 
 

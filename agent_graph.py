@@ -1,7 +1,8 @@
 from langgraph.graph import StateGraph, START, END, add_messages
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt.tool_node import ToolNode
-from langgraph.checkpoint.sqlite import SqliteSaver
+# from langgraph.checkpoint.sqlite import SqliteSaver, Async
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from typing import TypedDict, Annotated 
 from langchain_core.messages import (
     AnyMessage,
@@ -12,12 +13,14 @@ from langchain_core.messages import (
     ToolMessage,
     ToolCall,
 )
-import sqlite3
+# import sqlite3
+import aiosqlite
 from langchain_core.messages.utils import trim_messages
 from enum import Enum
 from prompts.playwriter_sysprompt import stageplay_system_message
-from agent_tools.characters import create_character, roster
+from agent_tools.characters import create_character
 from agent_tools.human_in_the_loop import human_assistance
+from db.handler import get_roster
 
 class ContextLength(Enum):
     very_short = 5
@@ -28,8 +31,6 @@ class ContextLength(Enum):
 class StagePlayState(TypedDict):
     counter: int
     context: Annotated[list[AnyMessage], add_messages]
-
-roster = roster
 
 
 class StagePlayWriter:
@@ -49,20 +50,29 @@ class StagePlayWriter:
         self.number_of_chapters = number_of_chapters
         self.current_chapter = 1
 
-        self.sqlite_connection = sqlite3.connect("database/checkpoints.db",
-                                                        check_same_thread=False)
-        self.checkpointer = SqliteSaver(self.sqlite_connection)
+        # self.sqlite_connection = sqlite3.connect("db/graph_checkpoints/checkpoints.db",
+        #                                                 check_same_thread=False)
+        # # self.checkpointer = SqliteSaver(self.sqlite_connection)
+
+        self.sqlite_connection = aiosqlite.connect("db/graph_checkpoints/checkpoints.db",
+                                                         check_same_thread=False)
+        self.checkpointer = AsyncSqliteSaver(self.sqlite_connection)
+
         self.tools = [create_character, human_assistance] 
         self.llm = llm.bind_tools(self.tools)
 
         # Graph components
         self.tool_node = ToolNode(tools=self.tools, messages_key="context")
 
-        #Build graph
-        self.graph = self.build_graph(checkpointer= self.checkpointer)
+        # #Build graph
+        # self.graph = self.build_graph(checkpointer= self.checkpointer)
 
     
     def system_message(self, synopsis: str | None):
+        """Get dynamic system message
+        This message gets passed at the start to every query to the llm
+        """
+        roster = get_roster()
         return SystemMessage(content= stageplay_system_message(tools=self.tools,
                                                                 roster=roster,
                                                                 themes=self.themes,
@@ -86,10 +96,7 @@ class StagePlayWriter:
         )
         reply = self.llm.invoke([self.system_message(synopsis=None), *trimmed_context])
         return {"counter": state["counter"] + 1, "context": reply}
-
-    def human_node(self, state: StagePlayState):
-        """Node for human input"""
-        
+   
  
     # Define the conditional edge that determines whether to continue or not
     def should_continue(self,state: StagePlayState):
