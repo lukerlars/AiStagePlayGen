@@ -18,7 +18,9 @@ def stageplay_system_message(
         setting : str,
         number_of_chapters : int,
         current_chapter : int,
-        synopsis: str | None):
+        number_of_lines: int,
+        line_count: int,
+        synopsis: list[str] | None):
     """Dynamic system message template for 
     stage play generator.
     """
@@ -65,19 +67,32 @@ def stageplay_system_message(
     #### Stage Play Information 
     
     1. General information
-        themes: {themes}
-        vibe : {vibe} 
-        setting: {setting}
-        number_of_chapters : {number_of_chapters}
+        Themes: {themes}
+        Vibe : {vibe} 
+        Setting: {setting}
+        Number_of_chapters : {number_of_chapters}
     
     2. Chapter information 
-        current chapter:  {current_chapter}/{number_of_chapters}
-
+        Current chapter:  {current_chapter}/{number_of_chapters}
+        Current number of lines {line_count}/{number_of_lines}
+        
     3. Roster:
         {'\n'.join([describe_character(character) for character in roster])}
     """
     if synopsis: 
         sys_message += f"""4. Synopsis
-        {synopsis}"""
-
+        {'\n'.join(synopsis)}"""
     return sys_message
+
+
+
+def synopsis_message():
+    message = """ 
+    Write a synopsis of the following set of lines""" 
+    return message
+
+def ending_message():
+    message = """
+    Write and ending to the story
+    """
+    return message

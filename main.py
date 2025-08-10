@@ -1,11 +1,10 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
 from agent_graph import StagePlayWriter, StagePlayState
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
-from uuid import uuid4
+# from uuid import uuid4
 from dotenv import load_dotenv
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
@@ -55,12 +54,22 @@ async def start_graph() -> dict[str, str]:
 
     return {"status": "Graph started, may be paused"}
 
+
 @app.get("/resume")
 async def resume_graph(input: str):
     config = RunnableConfig({"configurable": {"thread_id": thread_id}})
     resume_input = Command(resume= {"data": input})
-    async for event in playwriter.graph.astream(input = resume_input, config= config, stream_mode="values"): # type: ignore
-        print(event)
+    
+    async with AsyncSqliteSaver.from_conn_string(connection_string_checkpointer) as checkpointer:
+        async for event in (playwriter
+                            .build_graph(checkpointer)
+                            .astream(input=resume_input, config= config, stream_mode="values")):
+
+            message = event["context"][-1]
+            if isinstance(message, tuple):
+                print(event)
+            else:
+                message.pretty_print()
     return {"status": "Resumed"}
 
 
