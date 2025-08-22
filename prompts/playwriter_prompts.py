@@ -24,6 +24,11 @@ def stageplay_system_message(
     """Dynamic system message template for 
     stage play generator.
     """
+
+    # Format strings for dynamic info.
+    roster_formatted =  "\n".join([describe_character(character) for character in roster])
+    tools_formatted = "\n\t".join([tool.func.__name__ for tool in tools])
+    
     sys_message = f"""
     You are the co writer of a stage play
     You recieve a story and write the continuation
@@ -62,10 +67,10 @@ def stageplay_system_message(
     You may also and are encouraged to occasionally ask a human for input. In this case call the ask 
     human tool and a human will fill in the next contiunation.
     The available tools are: 
-        { '\n'.join([tool.func.__name__ for tool in tools])} 
+        {tools_formatted} 
 
     #### Stage Play Information 
-    
+
     1. General information
         Themes: {themes}
         Vibe : {vibe} 
@@ -77,11 +82,12 @@ def stageplay_system_message(
         Current number of lines {line_count}/{number_of_lines}
         
     3. Roster:
-        {'\n'.join([describe_character(character) for character in roster])}
+        {roster_formatted}
     """
     if synopsis: 
+        synopsis_formatted = "\n".join(synopsis) # type: ignore
         sys_message += f"""4. Synopsis
-        {'\n'.join(synopsis)}"""
+        {synopsis_formatted}"""
     return sys_message
 
 

@@ -64,7 +64,7 @@ class StagePlayWriter:
         self.story = []
     
     
-    def system_message(self,line_count: int ,synopsis: list[str] | None):
+    def system_message(self, line_count: int, synopsis: list[str] | None):
         """Get dynamic system message
         This message gets passed at the start to every query to the llm
         """
