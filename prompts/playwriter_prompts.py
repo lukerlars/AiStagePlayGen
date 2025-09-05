@@ -94,11 +94,13 @@ def stageplay_system_message(
 
 def synopsis_message():
     message = """ 
-    Write a synopsis of the following set of lines""" 
+    You will recive some lines and you job is to write a short synopis of the unfolding events.
+    Reply only the synopsis itself, do not ask for clarification of feedback
+    Lines : """ 
     return message
 
 def ending_message():
-    message = """
+    message = """ 
     Write and ending to the story
     """
     return message

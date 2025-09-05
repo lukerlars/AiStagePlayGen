@@ -51,7 +51,7 @@ class StagePlayWriter:
         self.setting = setting
         self.number_of_chapters = number_of_chapters
         self.current_chapter = 1
-        self.chapter_length = ContextLength.short.value
+        self.chapter_length = ContextLength.very_short.value
         self.current_synopsis = None
         self.chapter_continue_message = "Narrator: "
 
@@ -86,7 +86,7 @@ class StagePlayWriter:
         """  
 
         # Get messages from chapter start onwards
-        messages = state["context"][self.chapter_length*state["chapter"]:]
+        messages = state["context"][self.chapter_length*(state["chapter"]-1):]
 
         #Use trim function to ensure messages gives a vaild llm call
         trimmed_context = trim_messages(
@@ -98,12 +98,12 @@ class StagePlayWriter:
             include_system=False,  # Preserve SystemMessage if present (e.g., for prompts)
             allow_partial=False,  # Don't split individual messages
         )
-        
-        reply = self.llm.invoke([
-                self.system_message(line_count= state["line"],
-                                                  synopsis=self.current_synopsis),  # type: ignore
-                *trimmed_context 
-                ])
+        llm_message = [
+            self.system_message(line_count= state["line"], synopsis=self.current_synopsis),  # type: ignore
+            *trimmed_context 
+        ]
+        reply = self.llm.invoke(llm_message)
+        print(reply)
         return {"line": state["line"] + 1, "context": reply}
 
     def new_chapter(self, state: StagePlayState):
@@ -111,20 +111,20 @@ class StagePlayWriter:
         and start a new chapter
         """ 
         # Get messages from current chapter onwards
-        messages = state["context"][self.chapter_length*state["chapter"]:]
-
-        reply = self.llm.invoke([
+        messages = state["context"][self.chapter_length*(state["chapter"]- 1):]
+        llm_message = [
             synopsis_message(),
             *messages  # type: ignore
-        ])
+        ]
+        reply = self.llm.invoke(llm_message)
 
         # Add previous lines to history
         # Note: we start chapter count at 1
         idx_end = state["chapter"]*self.chapter_length
         idx_start =  idx_end - self.chapter_length
         assert(idx_start >= 0)
-        self.story.extend([line for line in state["context"][idx_start : idx_end]
-                            if isinstance(line, (HumanMessage, AIMessage))])
+        self.story.extend([message.content for message in state["context"][idx_start : idx_end]
+                            if isinstance(message, (HumanMessage, AIMessage))])
 
         if self.current_synopsis is None:
             self.current_synopsis =[reply.content]
@@ -138,13 +138,13 @@ class StagePlayWriter:
         """ Finish the play 
         """
         # Get messages from current chapter onwards
-        messages = state["context"][self.chapter_length*state["chapter"]:]
-
-        reply = self.llm.invoke([
+        messages = state["context"][self.chapter_length*(state["chapter"]- 1):]
+        llm_message = [
             ending_message(),
             *messages  # type: ignore
-        ])
-        idx_start = state["chapter"]*self.chapter_length
+        ]
+        reply = self.llm.invoke(llm_message)
+        idx_start = (state["chapter"]-1)*self.chapter_length
         self.story.extend([line for line in state["context"][idx_start:]] + [reply.content]) 
         return {"line": 0, "chapter": 0 ,"context": reply}
 
