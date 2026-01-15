@@ -1,3 +1,19 @@
+# Environment files
+.env
 *.env
+.env.*
+
+# Python
 .venv/
+venv/
 __pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.idea/
+.vscode/
+
+# Database files (local only)
+db/graph_checkpoints/*.db
+db/stageplay/*.db

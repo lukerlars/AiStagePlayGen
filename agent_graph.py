@@ -152,9 +152,11 @@ class StagePlayWriter:
     # Define the conditional edge that routes graph logic
     def routing_edge(self, state: StagePlayState):
         messages = state["context"]
+        if not messages:
+            return "continue"  # No messages yet, continue to write
         last_message: AnyMessage = messages[-1]
         # If there is no function call, then we continue to generating new line
-        if not last_message.tool_calls:  # type: ignore[attr-defijned]
+        if not getattr(last_message, 'tool_calls', None):
             if state["line"] >= self.chapter_length:
                 if state["chapter"] >= self.number_of_chapters:
                    return "end"

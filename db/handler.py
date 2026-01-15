@@ -65,12 +65,12 @@ def get_character(character_name):
 
 
 def get_character_relationships(character_name):
-    """Retrieve a characters relationships"""
+    """Retrieve all relationships for a character"""
     session = Session()
     try:
-        relationships = session.query(Relationships).filter_by(character=character_name).first()
+        relationships = session.query(Relationships).filter_by(character=character_name).all()
         if relationships:
-            return {relationships.recipient_character :  relationships.relationship}
+            return {rel.recipient_character: rel.relationship for rel in relationships}
         return None
     finally:
         session.close()

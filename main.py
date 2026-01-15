@@ -4,16 +4,17 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
-# from uuid import uuid4
-from dotenv import load_dotenv
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+from config import get_openai_api_key
 
-load_dotenv()
-app= FastAPI()
-llm = ChatOpenAI(model= "gpt-4o-mini")
+# Initialize OpenAI API key from config (handles both local and cloud)
+get_openai_api_key()
+app = FastAPI()
+llm = ChatOpenAI(model="gpt-4o-mini")
 
 inputs = StagePlayState(
-    counter=0,
+    line=0,
+    chapter=1,
     context=[
         HumanMessage(
             """Narrator: It is a sunny wistful day in Tam Tamouree,

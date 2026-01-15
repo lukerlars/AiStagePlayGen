@@ -35,17 +35,19 @@ def create_character(
             has a secret crush on Victoria
     """
 
+    errors = []
+
     character = Character(
         name = character_name,
         gender= gender,
-        age = age, 
+        age = age,
         disposition= disposition
         )
 
-    try:  
+    try:
         add_entry(character)
     except Exception as e:
-        print(f"error creating character {e}")
+        errors.append(f"Failed to create character: {e}")
 
     # Add character outwards facing relationships
     for recipient, relation  in relationships_out.items():
@@ -55,10 +57,10 @@ def create_character(
             relationship = relation,
         )
         try:
-            add_entry(relationship) 
+            add_entry(relationship)
         except Exception as e:
-            print(f"Error creating outwards relationship {e}")
-    
+            errors.append(f"Failed to create relationship to {recipient}: {e}")
+
     # Add characters inward facing relationships
     for deemer, relation  in relationships_in.items():
         relationship = Relationships(
@@ -67,11 +69,12 @@ def create_character(
             relationship = relation,
         )
         try:
-            add_entry(relationship) 
+            add_entry(relationship)
         except Exception as e:
-            print(f"Error creating inwards relationship {e}")
-     
+            errors.append(f"Failed to create relationship from {deemer}: {e}")
 
-    return f"character {character_name} created" 
+    if errors:
+        return f"Character {character_name} created with errors: {'; '.join(errors)}"
+    return f"Character {character_name} created successfully" 
 
 

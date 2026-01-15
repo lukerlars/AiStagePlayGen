@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+
+# Python
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+
+# Environment files
+.env
+*.env
+
+# IDE
+.idea
+.vscode
+
+# Local databases (will be created fresh in container)
+db/graph_checkpoints/*.db
+db/stageplay/*.db
+
+# Development files
+*.ipynb
+deployment.md
+app.yaml
+
+# Docker
+Dockerfile
+.dockerignore
