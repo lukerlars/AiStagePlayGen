@@ -10,7 +10,7 @@ from config import get_openai_api_key
 # Initialize OpenAI API key from config (handles both local and cloud)
 get_openai_api_key()
 app = FastAPI()
-llm = ChatOpenAI(model="gpt-4o-mini")
+llm = ChatOpenAI(model="gpt-5-mini")
 
 inputs = StagePlayState(
     line=0,

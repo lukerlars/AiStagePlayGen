@@ -65,7 +65,7 @@ def stageplay_system_message(
     storing new information about characters. You should feel free to create new characters.
     Make sure to always store the character information using the tool when introducing new characters.
     You may also and are encouraged to occasionally ask a human for input. In this case call the ask 
-    human tool and a human will fill in the next contiunation.
+    human tool and a human will fill in the next continuation.
     The available tools are: 
         {tools_formatted} 
 

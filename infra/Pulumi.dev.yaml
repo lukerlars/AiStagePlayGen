@@ -1,0 +1,4 @@
+config:
+  gcp:project: pure-display-467912-d3
+  gcp:region: europe-north1
+  stageplaygen:region: europe-north1

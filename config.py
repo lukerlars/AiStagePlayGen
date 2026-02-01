@@ -23,7 +23,7 @@ def _get_secret_from_gcp(secret_id: str, project_id: str | None = None) -> str |
 
         name = f"projects/{project_id}/secrets/{secret_id}/versions/latest"
         response = client.access_secret_version(request={"name": name})
-        return response.payload.data.decode("UTF-8")
+        return response.payload.data.decode("UTF-8").strip()
     except Exception:
         return None
 

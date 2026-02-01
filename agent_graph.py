@@ -103,7 +103,6 @@ class StagePlayWriter:
             *trimmed_context 
         ]
         reply = self.llm.invoke(llm_message)
-        print(reply)
         return {"line": state["line"] + 1, "context": reply}
 
     def new_chapter(self, state: StagePlayState):
@@ -186,6 +185,7 @@ class StagePlayWriter:
             },
         )
         builder.add_edge("tool_node", "write_lines_node")
+        builder.add_edge("new_chapter_node", "write_lines_node")
         builder.add_edge("ending_node", END)
         return builder.compile(checkpointer= checkpointer)
 

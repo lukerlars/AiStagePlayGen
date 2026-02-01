@@ -1,6 +1,3 @@
-# This is just a template from grok:
-# TODO adapt this for characters and add to application
-#
 from sqlalchemy import create_engine, Column, Integer, String 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
